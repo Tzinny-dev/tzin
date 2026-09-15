@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 import { existsSync } from 'node:fs'
 import type { App } from './server.js'
-import type { RouteImpl } from './contract.js'
+import type { AnyRoute } from './contract.js'
 import { listen } from './node.js'
 import { loadConfig, type TzinConfig } from './config.js'
 
@@ -10,7 +10,7 @@ function pad(s: string, n: number): string {
   return s.length >= n ? s : s + ' '.repeat(n - s.length)
 }
 
-function printRouteTable(routes: RouteImpl<any>[]): void {
+function printRouteTable(routes: AnyRoute[]): void {
   console.log(`\ntzin dev · ${routes.length} routes\n`)
   for (const { contract: c } of routes) {
     const method = `\x1b[36m${pad(c.method, 7)}\x1b[0m`

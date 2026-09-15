@@ -984,7 +984,7 @@ describe('browser channels client', () => {
     const bob = joinChannel(base, 'room', esOpts)
 
     const statePromise = new Promise<{ members: { member: string }[] }>((resolve) => {
-      ada.on('presence_state', resolve)
+      ada.on('presence_state', (d) => resolve(d as { members: { member: string }[] }))
     })
 
     await expect(
@@ -997,7 +997,9 @@ describe('browser channels client', () => {
       ]),
     ).resolves.toBeTruthy()
 
-    const greeted = new Promise<string>((resolve) => bob.on('greet', (d) => resolve(d.text)))
+    const greeted = new Promise<string>((resolve) =>
+      bob.on('greet', (d) => resolve((d as { text: string }).text)),
+    )
     const pushed = await ada.push('greet', { text: 'hi bob' })
     expect(pushed.delivered).toBeGreaterThan(0)
     await expect(greeted).resolves.toBe('hi bob')

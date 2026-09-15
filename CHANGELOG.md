@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.0.2 — Quality pass before wider adoption
+
+No API changes. Focused on proving the stable claim in CI and on the
+type surface.
+
+### Testing & coverage
+
+- Unit suites for `cache.ts` and `rate-limit.ts` (30 tests) — previously the
+  only modules without direct coverage
+- Coverage gates in CI: `npm run test:coverage` requires ≥70% lines, functions,
+  statements and branches across `src/` (baseline 73.6%)
+- `vitest.config.ts` with the v8 provider; `coverage/` git-ignored
+
+### CI matrix
+
+- Node `20 / 22 / 24` — previously only 22 and 24; Node 20 is the documented
+  floor and is now exercised
+- Cloudflare Workers probe (`miniflare`) runs on every push, not just releases
+- Benchmark job (`lookup`, `pipeline`, `http`) runs in CI with minimal rounds
+  to catch runtime regressions early
+
+### Type-surface cleanup
+
+- Public `RouteImpl<any>` occurrences replaced by the new erasable
+  `AnyRoute` type — `createApp`, MCP tools, OpenAPI, llms.txt, channels and
+  route-table printing now take `AnyRoute[]` while `impl()` keeps full
+  per-endpoint typing
+- Browser client callbacks (`on`) and internal `any` returns typed as
+  `unknown`; `client()` proxy input uses a typed `ClientInput`
+- New exports: `AnyRoute`, `RouteResult`
+
 ## 1.0.1 — Repo moved to Tzinny-dev
 
 Metadata-only release after the source repository moved from

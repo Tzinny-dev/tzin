@@ -1,4 +1,4 @@
-import type { RouteImpl } from './contract.js'
+import type { AnyRoute } from './contract.js'
 
 /** '/users/:id' -> '/users/{id}' (OpenAPI syntax) */
 function toOpenApiPath(path: string): string {
@@ -15,7 +15,7 @@ function schemaRefOrInline(schema: unknown): unknown {
  * Zero conversion layer: TypeBox == JSON Schema == OpenAPI component vocabulary.
  */
 export function generateOpenApi(
-  routes: RouteImpl<any>[],
+  routes: AnyRoute[],
   info: { title: string; version: string } = { title: 'API', version: '0.0.0' },
 ): Record<string, unknown> {
   const paths: Record<string, Record<string, unknown>> = {}

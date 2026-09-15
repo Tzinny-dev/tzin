@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22, 24]
+        node: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,8 +24,12 @@ jobs:
         run: npx tsc --noEmit
       - name: Tests
         run: npm test
+      - name: Coverage gate (src ≥ 70%)
+        run: npm run test:coverage
       - name: MCP stdio probe
         run: node scripts/mcp-client.mjs
+      - name: Workers probe (miniflare)
+        run: node scripts/workers-probe.mjs
 
   bun-smoke:
     runs-on: ubuntu-latest
@@ -42,3 +46,21 @@ jobs:
           curl -fs -X POST http://localhost:4620/echo \
             -H 'content-type: application/json' \
             -d '{"message":"ci","loud":true}' | grep -q '"echoed":"CI"'
+
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build (needed by HTTP bench -> dist imports)
+        run: npm run build
+      - name: Router lookup bench
+        run: npm run bench:lookup
+      - name: In-process pipeline bench
+        run: npm run bench:pipeline
+      - name: HTTP throughput bench (1 round)
+        run: ROUNDS=1 npm run bench:http

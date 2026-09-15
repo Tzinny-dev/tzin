@@ -1,5 +1,5 @@
 import type { App } from './server.js'
-import type { RouteImpl } from './contract.js'
+import type { AnyRoute } from './contract.js'
 
 const PROTOCOL_VERSION = '2025-06-18'
 const SERVER_INFO = { name: 'tzin', version: '0.1.0' }
@@ -14,7 +14,7 @@ function defaultToolName(c: { method: string; path: string }): string {
  * The inputSchema is assembled from the contract's declared sections —
  * TypeBox schemas are already JSON Schema, so there is no conversion layer.
  */
-export function toTool(route: RouteImpl<any>): Record<string, unknown> {
+export function toTool(route: AnyRoute): Record<string, unknown> {
   const c = route.contract
   const properties: Record<string, unknown> = {}
   const required: string[] = []
@@ -60,7 +60,7 @@ export function toTool(route: RouteImpl<any>): Record<string, unknown> {
   }
 }
 
-export function listTools(routes: RouteImpl<any>[]): Record<string, unknown>[] {
+export function listTools(routes: AnyRoute[]): Record<string, unknown>[] {
   return routes.map(toTool)
 }
 
@@ -95,7 +95,7 @@ function resolveSection(
 }
 
 async function callTool(app: App, name: string, args: unknown): Promise<Record<string, unknown>> {
-  const routes: RouteImpl<any>[] = app.routes
+  const routes: AnyRoute[] = app.routes
   const route = routes.find((r) => (r.contract.name ?? defaultToolName(r.contract)) === name)
 
   if (!route) {

@@ -38,7 +38,7 @@ export type Unsubscribe = () => void
 export interface Channel {
   readonly topic: string
   /** Listen to a named event; returns an unsubscribe function. */
-  on(event: string, cb: (data: any) => void): Unsubscribe
+  on(event: string, cb: (data: unknown) => void): Unsubscribe
   /** Broadcast to every subscriber of this channel. */
   push(event: string, data?: unknown): Promise<{ delivered: number }>
   /** Refresh your presence immediately (the client also does this automatically). */
@@ -47,7 +47,7 @@ export interface Channel {
   close(): void
 }
 
-function parseData(raw: unknown): any {
+function parseData(raw: unknown): unknown {
   try {
     return typeof raw === 'string' ? JSON.parse(raw) : raw
   } catch {
@@ -76,8 +76,8 @@ export function joinChannel(baseUrl: string, topic: string, options: JoinOptions
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     })
 
-  const listeners = new Map<string, Set<(data: any) => void>>()
-  const dispatch = (event: string, data: any): void => {
+  const listeners = new Map<string, Set<(data: unknown) => void>>()
+  const dispatch = (event: string, data: unknown): void => {
     const set = listeners.get(event)
     if (set) for (const cb of set) cb(data)
   }

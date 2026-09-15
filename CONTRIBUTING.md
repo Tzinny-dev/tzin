@@ -1,6 +1,6 @@
 # Contributing
 
-tzin is pre-1.0 experimental software — issue reports and reproduction cases
+tzin is stable at 1.0.x — issue reports, reproduction cases and well-scoped PRs
 are the most valuable contributions right now.
 
 ```sh

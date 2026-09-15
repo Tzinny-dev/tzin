@@ -11,6 +11,8 @@ export {
   type ResponseOf,
   type Handler,
   type RouteImpl,
+  type AnyRoute,
+  type RouteResult,
 } from './contract.js'
 
 export { createApp, type App } from './server.js'

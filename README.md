@@ -9,8 +9,9 @@
 [![npm](https://img.shields.io/npm/v/@carlos-tzin/tzin)](https://www.npmjs.com/package/@carlos-tzin/tzin)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/carlostzin)
 
-**Status: experimental, pre-1.0.** The core works end-to-end and the scaling thesis is
-measured (see [Benchmarks](#benchmarks)), but this is not yet production software.
+**Status: stable (1.0.x).** The core works end-to-end (see [Benchmarks](#benchmarks));
+1.0.0 shipped the stable API, and 1.0.2 adds test coverage gates, a wider CI
+matrix and a public type-clean surface.
 
 ```sh
 npm install @carlos-tzin/tzin

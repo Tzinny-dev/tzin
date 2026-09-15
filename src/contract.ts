@@ -94,6 +94,22 @@ export function impl<const C extends AnyContract>(c: C, handler: Handler<C>): Ro
   return { contract: c, handler }
 }
 
+/** A handler's resolved reply with the per-endpoint generics erased. */
+export type RouteResult = { status: number; body: unknown } | RawResult
+
+/**
+ * A route with its contract generics erased, for heterogeneous registries —
+ * `createApp`, OpenAPI/MCP/llms generators, docs tools. Each concrete
+ * `RouteImpl<C>` satisfies it (impl keeps inputs/outputs fully typed); the
+ * erased handler is only invoked by dispatchers, which supply validated
+ * sections via a cast (the `never` input makes accidental direct calls a
+ * compile error).
+ */
+export interface AnyRoute {
+  contract: AnyContract
+  handler: (input: never) => RouteResult | Promise<RouteResult>
+}
+
 /** Thrown inside handlers -> converted to an HTTP error response. */
 export class HttpError extends Error {
   constructor(

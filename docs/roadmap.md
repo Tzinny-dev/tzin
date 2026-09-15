@@ -170,4 +170,4 @@ const handler = impl(getUser, async ({ params, ctx }) => {
 6. **Jobs** — background tasks
 7. **Logging** — observabilidad
 
-Cada fase es un release minor (0.2.0, 0.3.0, etc.)
+Cada fase es un release minor (1.1.0, 1.2.0, etc.)

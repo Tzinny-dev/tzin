@@ -1,5 +1,5 @@
 import { t } from './schema.js'
-import { contract, impl, type RouteImpl } from './contract.js'
+import { contract, impl, type AnyRoute } from './contract.js'
 import type { Hub } from './hub.js'
 import type { Presence } from './presence.js'
 import { sse } from './sse.js'
@@ -15,7 +15,7 @@ export interface ChannelOptions {
  *   POST /channels/:topic/heartbeat  presence join/refresh { member, meta? }
  *   POST /channels/:topic/leave      presence leave { member }
  */
-export function channelRoutes(hub: Hub, options: ChannelOptions = {}): RouteImpl<any>[] {
+export function channelRoutes(hub: Hub, options: ChannelOptions = {}): AnyRoute[] {
   const presence = options.presence
 
   const subscribe = contract({
@@ -61,7 +61,7 @@ export function channelRoutes(hub: Hub, options: ChannelOptions = {}): RouteImpl
     responses: { 200: t.Object({ ok: t.Boolean() }) },
   })
 
-  const routes: RouteImpl<any>[] = [
+  const routes: AnyRoute[] = [
     impl(subscribe, ({ params, query, ctx }) => {
       const topic = params.topic
       const member = query?.member

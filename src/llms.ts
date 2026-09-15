@@ -1,4 +1,4 @@
-import type { RouteImpl } from './contract.js'
+import type { AnyRoute } from './contract.js'
 
 export interface ApiMeta {
   title?: string
@@ -6,7 +6,7 @@ export interface ApiMeta {
   version?: string
 }
 
-function endpointLines(routes: RouteImpl<any>[]): string[] {
+function endpointLines(routes: AnyRoute[]): string[] {
   return routes.map(({ contract: c }) => {
     const name = c.name ?? c.path.replace(/[^A-Za-z0-9]+/g, '_')
     const label = `${c.method} ${c.path}`
@@ -16,7 +16,7 @@ function endpointLines(routes: RouteImpl<any>[]): string[] {
 }
 
 /** llms.txt: the discoverable, human-readable index of the API. */
-export function renderLlmsTxt(routes: RouteImpl<any>[], meta: ApiMeta = {}): string {
+export function renderLlmsTxt(routes: AnyRoute[], meta: ApiMeta = {}): string {
   const title = meta.title ?? 'API'
   const summary =
     meta.description ?? `${routes.length} typed endpoints over a shared contract layer.`
@@ -33,7 +33,7 @@ export function renderLlmsTxt(routes: RouteImpl<any>[], meta: ApiMeta = {}): str
 }
 
 /** llms-full.txt: same index plus each endpoint's declared JSON Schemas. */
-export function renderLlmsFullTxt(routes: RouteImpl<any>[], meta: ApiMeta = {}): string {
+export function renderLlmsFullTxt(routes: AnyRoute[], meta: ApiMeta = {}): string {
   const head = renderLlmsTxt(routes, meta)
   const blocks = routes.map(({ contract: c }) => {
     const name = c.name ?? c.path.replace(/[^A-Za-z0-9]+/g, '_')
@@ -43,8 +43,9 @@ export function renderLlmsFullTxt(routes: RouteImpl<any>[], meta: ApiMeta = {}):
       ...(c.description ? [`${c.description}`, ''] : []),
     ]
     for (const section of ['params', 'query', 'headers', 'cookies', 'body'] as const) {
-      if (section in c && c[section]) {
-        lines.push(`\`${section}\` schema:`, '', '```json', JSON.stringify(c[section]), '```', '')
+      const schema = (c as unknown as Record<string, unknown>)[section]
+      if (schema) {
+        lines.push(`\`${section}\` schema:`, '', '```json', JSON.stringify(schema), '```', '')
       }
     }
     for (const [status, schema] of Object.entries(c.responses)) {

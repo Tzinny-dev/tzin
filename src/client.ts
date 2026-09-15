@@ -21,6 +21,16 @@ export type ClientOf<Routes extends Record<string, AnyContract>> = {
   [K in keyof Routes]: CallerFn<Routes[K]>
 }
 
+/** Runtime shape of a client call argument, given contracts are untyped at runtime. */
+interface ClientInput {
+  params?: Record<string, unknown>
+  query?: Record<string, unknown>
+  body?: unknown
+  headers?: Record<string, string>
+  cookies?: Record<string, unknown>
+  fetchInit?: RequestInit
+}
+
 export function client<Routes extends Record<string, AnyContract>>(
   routes: Routes,
   baseUrl = '',
@@ -29,7 +39,7 @@ export function client<Routes extends Record<string, AnyContract>>(
     get(_target, key: string | symbol) {
       if (typeof key !== 'string' || !(key in routes)) return undefined
       const c = routes[key]
-      return async (input: Record<string, any> = {}) => {
+      return async (input: ClientInput = {}) => {
         let path = c.path.replace(/:([A-Za-z0-9_]+)/g, (_m, name) =>
           encodeURIComponent(String(input.params?.[name] ?? `{${name}}`)),
         )
@@ -43,7 +53,7 @@ export function client<Routes extends Record<string, AnyContract>>(
         if ('body' in c && c.body) init.body = JSON.stringify(input.body)
         const headers: Record<string, string> = { ...input.headers }
         if (input.cookies) {
-          headers.cookie = Object.entries(input.cookies as Record<string, unknown>)
+          headers.cookie = Object.entries(input.cookies)
             .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
             .join('; ')
         }

@@ -1,5 +1,5 @@
 import { Value } from './schema.js'
-import { HttpError, isRawResult, type RouteImpl } from './contract.js'
+import { HttpError, isRawResult, type AnyRoute } from './contract.js'
 import { createMatcher, type LookupResult, type RouteMatch } from './router.js'
 import { Ctx, type ContextKey } from './context.js'
 import { compose, type Middleware } from './middleware.js'
@@ -9,7 +9,7 @@ import { renderLlmsTxt, renderLlmsFullTxt, type ApiMeta } from './llms.js'
 import { generateOpenApi } from './openapi.js'
 
 export interface App {
-  routes: RouteImpl<any>[]
+  routes: AnyRoute[]
   fetch(req: Request): Promise<Response>
   /**
    * Same dispatch as fetch(), without constructing undici Responses for
@@ -162,13 +162,13 @@ type HandlerOutcome =
   | { kind: 'raw'; response: Response }
   | { kind: 'json'; status: number; body: unknown }
 
-export function createApp(routes: RouteImpl<any>[], options: AppOptions = {}): App {
+export function createApp(routes: AnyRoute[], options: AppOptions = {}): App {
   const matchRoute = createMatcher(
     routes.map((r) => ({ method: r.contract.method, path: r.contract.path, route: r })),
   )
 
   /** Shared validation + handler invocation. Single source for both exits. */
-  async function runRoute(hit: RouteMatch<RouteImpl<any>>, req: Request, ctx: Ctx): Promise<HandlerOutcome> {
+  async function runRoute(hit: RouteMatch<AnyRoute>, req: Request, ctx: Ctx): Promise<HandlerOutcome> {
     const c = hit.route.contract
     const input: Record<string, unknown> = { ctx }
 
@@ -228,8 +228,8 @@ export function createApp(routes: RouteImpl<any>[], options: AppOptions = {}): A
    * param decode collapse to a Map hit. Bounded: cleared when it exceeds
    * ROUTE_CACHE_MAX so abusive unique-URL traffic can't grow it unbounded.
    */
-  const routeCache = new Map<string, LookupResult<RouteImpl<any>>>()
-  function cachedMatch(method: string, pathname: string): LookupResult<RouteImpl<any>> {
+  const routeCache = new Map<string, LookupResult<AnyRoute>>()
+  function cachedMatch(method: string, pathname: string): LookupResult<AnyRoute> {
     const key = `${method} ${pathname}`
     let hit = routeCache.get(key)
     if (hit === undefined) {
