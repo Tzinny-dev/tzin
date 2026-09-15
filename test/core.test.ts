@@ -1,3 +1,4 @@
+import { WebSocket } from 'ws'
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import { t } from '../src/schema.js'
 import { contract, impl, HttpError, createApp, generateOpenApi, listen, client, middleware, defineContext, provide } from '../src/index.js'
