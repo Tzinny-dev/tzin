@@ -1,15 +1,20 @@
 # Changelog
 
-## 1.0.3 — Quality pass before wider adoption
+## 1.0.4 — Node 20 compatibility fix
+
+No API changes. CI was failing on the Node 20 floor because the WS test and the
+Workers probe relied on the global `WebSocket`, which only exists on Node ≥22.
+
+### Testing & coverage
+
+- `native websockets` test and the Workers probe use the `ws` package client
+  instead of the global `WebSocket`, keeping the Node 20 floor green
 
 No API changes. Focused on proving the stable claim in CI and on the
 type surface.
 
 ### Testing & coverage
 
-- `native websockets` test and the Workers probe use the `ws` package client
-  instead of the global `WebSocket` (a Node ≥22 global), keeping the Node 20
-  floor green
 - Unit suites for `cache.ts` and `rate-limit.ts` (30 tests) — previously the
   only modules without direct coverage
 - Coverage gates in CI: `npm run test:coverage` requires ≥70% lines, functions,
