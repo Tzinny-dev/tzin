@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.2 — Quality pass before wider adoption
+## 1.0.3 — Quality pass before wider adoption
 
 No API changes. Focused on proving the stable claim in CI and on the
 type surface.
