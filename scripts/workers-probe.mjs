@@ -4,6 +4,7 @@
  */
 import { build } from 'esbuild'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
+import { WebSocket } from 'ws'
 
 const checks = []
 const check = (name, ok, extra = '') => {

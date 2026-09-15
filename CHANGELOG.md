@@ -7,8 +7,9 @@ type surface.
 
 ### Testing & coverage
 
-- `native websockets` test uses the `ws` package client instead of the global
-  `WebSocket` (a Node ≥22 global), keeping the Node 20 floor green
+- `native websockets` test and the Workers probe use the `ws` package client
+  instead of the global `WebSocket` (a Node ≥22 global), keeping the Node 20
+  floor green
 - Unit suites for `cache.ts` and `rate-limit.ts` (30 tests) — previously the
   only modules without direct coverage
 - Coverage gates in CI: `npm run test:coverage` requires ≥70% lines, functions,
