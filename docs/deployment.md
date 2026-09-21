@@ -10,10 +10,17 @@ Three production paths for a tzin app: Node container, Cloudflare Workers, and m
 
 ### Build your app
 
-A tzin app is a standard TypeScript project with `src/app.ts` exporting the App. Build it with the framework's compile config:
+A tzin app is a standard TypeScript project with `src/app.ts` exporting the App:
 
 ```bash
-npm run build            # tsc -p tsconfig.build.json → dist/
+npx create-tzin my-app --template node   # src/app.ts + src/index.ts + tsconfig.json
+cd my-app && npm install
+```
+
+Build it with the TypeScript compiler (the template's `build` script):
+
+```bash
+npm run build            # tsc → dist/ (template script: "build": "tzin build")
 ```
 
 The compiled app lives in `dist/`. Serve it with the Node adapter (your own `src/app.ts` exports the app):
@@ -26,21 +33,24 @@ import app from './app.js'
 listen(app, { port: Number(process.env.PORT) || 3000 })
 ```
 
-### Dockerfile (multi-stage)
+### Dockerfile (multi-stage, matches the node template)
 
-Use this as a starting point for your own app. Replace entrypoint files as needed.
+Copy this into the app repo created above. It uses the template's own
+layout (`tsconfig.json` → `dist/`, entry `src/index.ts` → `dist/index.js`)
+so `docker build .` works with no path edits — only change the image
+name and `PORT` if needed.
 
 ```dockerfile
-# ---- build ----
+# ---- build ---- — same files the node template ships
 FROM node:20-slim AS build
 WORKDIR /build
 
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
-COPY tsconfig.build.json ./
+COPY tsconfig.json ./
 COPY src/ ./src/
-RUN npm run build
+RUN npm run build          # tsc → dist/ (template script: "build": "tzin build")
 
 # Copy your app entrypoint (the file that exports + starts the app)
 COPY src/app.ts ./app.ts
@@ -52,9 +62,10 @@ WORKDIR /app
 
 COPY --from=build /build/dist ./dist
 COPY --from=build /build/package.json ./
+COPY --from=build /build/package-lock.json ./
 
-# If your app has a separate main.ts, copy it too:
-# COPY --from=build /build/main.js ./main.js
+# Production deps only — drops the template's devDependencies
+# (tsx, vitest, typescript, @types/node).
 
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -64,8 +75,22 @@ EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=3s --retries=3 \
   CMD node -e "fetch('http://localhost:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-CMD ["node", "dist/app.js"]
+# Matches the node template's `start` script ("node dist/index.js").
+CMD ["node", "dist/index.js"]
 ```
+
+End-to-end on a machine with a Docker daemon (not validated in CI here):
+
+```bash
+npx create-tzin my-app --template node && cd my-app && npm install
+cp /path/to/tzin/Dockerfile /path/to/tzin/.dockerignore .
+docker build -t my-tzin-app .
+docker run -p 3000:3000 --env PORT=3000 my-tzin-app
+curl -fs localhost:3000/health   # {"status":"ok"}
+```
+
+(The template's `/health` returns 200 — the Dockerfile `HEALTHCHECK`
+above assumes exactly that.)
 
 > **Note:** If your app entrypoint does both export + listen in the same file (like `examples/node-demo.ts`), compile it and run the resulting `dist/*.js` directly. If it only exports the app (recommended), add a tiny `main.ts` that calls `listen()`.
 
@@ -74,6 +99,24 @@ CMD ["node", "dist/app.js"]
 ```bash
 docker build -t my-tzin-app .
 docker run -p 3000:3000 --env PORT=3000 my-tzin-app
+```
+
+### Multi-node without code changes? Not quite — one optional file
+
+`tzin` has no magic env-var switch for clustering: a `Hub` joins a cluster
+only when you pass it a `MessageBus`. The **node template** ships the
+optional helper for exactly this — `src/bus.ts`:
+
+- No `REDIS_URL` → `redisBus()` returns `undefined`, app runs standalone.
+- `REDIS_URL=redis://…` → returns an ioredis-backed `MessageBus`
+  (lazy `import('ioredis')`, so the dep is only needed when you scale).
+- `src/bus.ts` typechecks with **zero new dependencies** (structural typing).
+
+To use it, wire the hub where you create channels (or just leave the file
+unused — it costs nothing). Install the driver only for scaled deploys:
+
+```bash
+npm i ioredis
 ```
 
 ### docker-compose (app + Redis for clustering)
@@ -104,7 +147,7 @@ services:
     restart: unless-stopped
 ```
 
-Scale horizontally:
+Scale horizontally (needs `npm i ioredis` + the `src/bus.ts` wiring above):
 
 ```bash
 docker compose up -d --scale app=3
@@ -237,7 +280,7 @@ The Dockerfile above assumes `/health` returns 200. Adjust the `HEALTHCHECK` CMD
 
 ## Process management (bare Node, no Docker)
 
-- **PM2:** `pm2 start dist/app.js --name tzin --env production`
+- **PM2:** `pm2 start dist/index.js --name tzin --env production` (the node template's entry)
 - **SIGTERM:** tzin's Node adapter handles graceful shutdown; make sure your process manager forwards signals.
 - **Logs:** stdout/stderr. For structured logging, see the [logging roadmap phase](roadmap.md#fase-7-logging).
 

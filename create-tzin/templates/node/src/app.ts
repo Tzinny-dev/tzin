@@ -8,7 +8,7 @@ import { usersRoute } from './routes/users.js'
 // Configure logging
 configure({ level: 'info', pretty: true })
 
-export const app = createApp([healthRoute, greetRoute, usersRoute], {
+export const app = createApp([healthRoute, greetRoute, ...usersRoute], {
   middleware: [
     bearerAuth({ secret: process.env.JWT_SECRET || 'dev-secret' }),
   ],
