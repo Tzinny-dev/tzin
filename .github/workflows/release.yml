@@ -2,7 +2,12 @@ name: Release
 
 # Publishes to npm when a v* tag is pushed (tags are created by
 # `node scripts/release.mjs <patch|minor|major>`).
-# Requires repo secret NPM_TOKEN (automation token, no OTP).
+#
+# Auth: npm Trusted Publishing (OIDC) — no NPM_TOKEN secret needed.
+# One-time setup per package (@carlos-tzin/tzin, create-tzin) at
+# npmjs.com → package Settings → Trusted Publisher:
+#   organization: Tzinny-dev / repo: tzin / workflow: release.yml
+# Docs: https://docs.npmjs.com/trusted-publishers/
 
 on:
   push:
@@ -14,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # for gh release create
+      id-token: write # for npm trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,9 +30,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --access public --provenance
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

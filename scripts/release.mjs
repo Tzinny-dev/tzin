@@ -87,8 +87,13 @@ if (!dryRun) {
 console.log(`
 Next steps:
   git push && git push origin v${next}
-  npm publish --otp=XXXXXX        # 2FA code from your authenticator
-  npm publish --workspace create-tzin   # if create-tzin changed
+  # Trusted Publishing (OIDC): pushing the tag triggers .github/workflows/release.yml,
+  # which runs npm publish --provenance with no token. No OTP needed.
+  # Manual fallback (2FA code from your authenticator):
+  npm publish --otp=XXXXXX
+  # (create-tzin ships from the same repo — publish it too when its files changed:
+  #  the release workflow covers the root package; run this by hand for create-tzin)
+  npm publish --workspace create-tzin --otp=XXXXXX
   gh release create v${next} --title "${next}" --generate-notes
   # then edit the generated notes with CHANGELOG.md section
 `)
