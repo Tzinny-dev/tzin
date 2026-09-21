@@ -32,6 +32,11 @@ jobs:
       - run: npm test
       # Trusted Publishing (OIDC) needs npm >= 11.5.1; Node 22 bundles npm 10.x
       - run: npm install -g npm@latest
+      # setup-node@v4 writes _authToken=<placeholder> into .npmrc when no
+      # NODE_AUTH_TOKEN is set, which makes npm skip the OIDC exchange
+      # (actions/setup-node#1551) — strip it so trusted publishing kicks in
+      - name: Strip setup-node _authToken placeholder (breaks OIDC)
+        run: sed -i '/_authToken/d' "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
       - run: npm publish --access public --provenance
       - name: GitHub Release
         env:
@@ -73,6 +78,9 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      - name: Strip setup-node _authToken placeholder (breaks OIDC)
+        if: steps.changed.outputs.touched == 'true'
+        run: sed -i '/_authToken/d' "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
       - run: npm install --prefix create-tzin
         if: steps.changed.outputs.touched == 'true'
       - run: npm run build --prefix create-tzin
