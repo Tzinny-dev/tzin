@@ -786,9 +786,16 @@ tzin build                  # → dist/
 Deploy to production.
 
 ```bash
-tzin deploy --target node      # build + run instructions
-tzin deploy --target workers   # wrangler deploy
+tzin deploy --target node                          # build + run instructions
+tzin deploy --target node --pack                   # build + runnable tarball (dist + manifest + container files)
+tzin deploy --target node --pack --docker <tag>    # + docker build -t <tag>
+tzin deploy --target node --docker <tag> --push    # + docker push (needs --docker)
+tzin deploy --target workers                       # wrangler deploy
 ```
+
+`--pack` names the tarball from `package.json` (`<name>-<version>.tgz`).
+`--docker` requires a `Dockerfile` in the project (see `docs/deployment.md`).
+`--push` only takes effect together with `--docker`.
 
 ### `tzin generate <type> <name>`
 

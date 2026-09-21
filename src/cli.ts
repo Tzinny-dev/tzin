@@ -1,9 +1,10 @@
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 
 const [,, cmd, ...rest] = process.argv
+let matched = false
 
 function usage(): never {
   console.error(`tzin CLI
@@ -11,7 +12,8 @@ function usage(): never {
   Commands:
     tzin dev [entry] [--port N]     start dev server with hot reload
     tzin build                      build for production
-    tzin deploy [--target <target>] deploy (node, workers)
+    tzin deploy [--target <target>] [--pack] [--docker <tag> [--push]]
+                                     deploy (node, workers)
     tzin generate route <name>      generate a route stub
     tzin generate middleware <name>  generate a middleware stub
     tzin generate test <name>       generate a test stub`)
@@ -23,6 +25,7 @@ if (!cmd || cmd === '--help' || cmd === '-h') usage()
 // ── dev ──────────────────────────────────────────────────────────────
 
 if (cmd === 'dev') {
+  matched = true
   let entry = ''
   let port = '3000'
 
@@ -46,6 +49,7 @@ if (cmd === 'dev') {
 // ── build ─────────────────────────────────────────────────────────────
 
 if (cmd === 'build') {
+  matched = true
   const cwd = process.cwd()
 
   // Check for tsconfig
@@ -79,9 +83,16 @@ if (cmd === 'build') {
 // ── deploy ────────────────────────────────────────────────────────────
 
 if (cmd === 'deploy') {
+  matched = true
   const cwd = process.cwd()
   const targetFlag = rest.indexOf('--target')
   const target = targetFlag !== -1 ? rest[targetFlag + 1] : 'node'
+  const pack = rest.includes('--pack')
+  const dockerIdx = rest.indexOf('--docker')
+  const dockerTag = dockerIdx !== -1 && rest[dockerIdx + 1] && !rest[dockerIdx + 1].startsWith('-')
+    ? rest[dockerIdx + 1]
+    : null
+  const push = rest.includes('--push')
 
   if (target === 'workers') {
     console.log('Deploying to Cloudflare Workers...')
@@ -102,6 +113,18 @@ if (cmd === 'deploy') {
   }
 
   // Default: Node
+  if (target !== 'node') {
+    console.error(`Unknown deploy target: ${target}`)
+    console.error('Available: node, workers')
+    process.exit(1)
+  }
+
+  // Check for tsconfig
+  if (!existsSync(resolve(cwd, 'tsconfig.json'))) {
+    console.error('No tsconfig.json found')
+    process.exit(1)
+  }
+
   console.log('Building for production...')
 
   const build = spawn('npx', ['tsc', '-p', 'tsconfig.json'], {
@@ -112,15 +135,83 @@ if (cmd === 'deploy') {
   build.on('exit', (code) => {
     if (code !== 0) process.exit(code ?? 1)
     console.log('\n✓ Build complete')
-    console.log('Run: node dist/index.js')
-    process.exit(0)
+    afterBuild()
   })
-  process.exit(0)
+  // NOTE: no trailing process.exit(0) here — the parent must stay alive
+  // until the build child exits and afterBuild() runs. Calling
+  // process.exit() here would kill the process (and the child listener)
+  // before the build finishes.
+
+  function afterBuild() {
+    const pkgPath = resolve(cwd, 'package.json')
+    let name = 'app'
+    let version = '0.0.0'
+    try {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+      name = String(pkg.name ?? 'app').replace(/^@/, '').replace(/\//g, '-')
+      version = String(pkg.version ?? '0.0.0')
+    } catch {
+      console.error('No package.json found — is this a tzin project?')
+      process.exit(1)
+    }
+
+    // --pack: runnable tarball (dist + manifest + container files when present).
+    if (pack) {
+      const out = resolve(cwd, `${name}-${version}.tgz`)
+      const files = ['dist', 'package.json']
+      for (const f of ['Dockerfile', 'docker-compose.yml', '.dockerignore']) {
+        if (existsSync(resolve(cwd, f))) files.push(f)
+      }
+      console.log(`Packing ${files.join(', ')} → ${out}`)
+      const tar = spawn('tar', ['-czf', out, ...files], { cwd, stdio: 'inherit' })
+      tar.on('exit', (tarCode) => {
+        if (tarCode !== 0) process.exit(tarCode ?? 1)
+        console.log(`\n✓ Packed ${out}`)
+        console.log(`Unpack + run: tar -xzf ${name}-${version}.tgz && node dist/index.js`)
+        if (dockerTag) dockerBuild()
+        else process.exit(0)
+      })
+      return
+    }
+
+    if (dockerTag) {
+      dockerBuild()
+      return
+    }
+
+    console.log('Run: node dist/index.js')
+    console.log('Tip: tzin deploy --target node --pack [--docker <tag> [--push]] for a runnable artifact')
+    process.exit(0)
+  }
+
+  function dockerBuild() {
+    if (!dockerTag) return
+    if (!existsSync(resolve(cwd, 'Dockerfile'))) {
+      console.error('No Dockerfile found. Copy the reference Dockerfile from the tzin repo (see docs/deployment.md).')
+      process.exit(1)
+    }
+    console.log(`Building Docker image ${dockerTag}...`)
+    const args = ['build', '-t', dockerTag, '.']
+    const child = spawn('docker', args, { cwd, stdio: 'inherit' })
+    child.on('exit', (buildCode) => {
+      if (buildCode !== 0) process.exit(buildCode ?? 1)
+      console.log(`\n✓ Image built: ${dockerTag}`)
+      if (!push) {
+        console.log(`Run: docker run -p 3000:3000 --env PORT=3000 ${dockerTag}`)
+        process.exit(0)
+        return
+      }
+      console.log(`Pushing ${dockerTag}...`)
+      const pushChild = spawn('docker', ['push', dockerTag], { cwd, stdio: 'inherit' })
+      pushChild.on('exit', (pushCode) => process.exit(pushCode ?? 1))
+    })
+  }
 }
 
 // ── generate ─────────────────────────────────────────────────────────
 
 if (cmd === 'generate' || cmd === 'g') {
+  matched = true
   const [sub, ...args] = rest
   const name = args[0]
 
@@ -222,4 +313,4 @@ describe('${name}', () => {
   process.exit(1)
 }
 
-usage()
+if (!matched) usage()

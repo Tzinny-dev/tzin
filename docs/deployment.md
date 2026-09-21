@@ -255,6 +255,10 @@ The Dockerfile above assumes `/health` returns 200. Adjust the `HEALTHCHECK` CMD
   (OTP) — see `Next steps` output of the script.
 - [ ] **Tag-triggered CI publish** — see `.github/workflows/release.yml` (runs
   on `v*` tags, needs `NPM_TOKEN` secret). Not yet exercised end-to-end.
-- [ ] **`tzin deploy --target node` as a real artifact** — today the CLI builds
-  with `tsc` and prints `Run: node dist/index.js`. For a runnable artifact
-  (tarball/image/push), wire it to the Dockerfile/compose above.
+- [x] **`tzin deploy --target node` as a real artifact** — `src/cli.ts` now
+  builds with `tsc` and then: `--pack` tars `dist + package.json (+Dockerfile /
+  docker-compose.yml / .dockerignore` when present) into
+  `<name>-<version>.tgz`; `--docker <tag>` runs `docker build -t <tag>`;
+  `--push` chains `docker push`. Validated here with a scratch project
+  (build → pack → tarball lists `dist/ + package.json`); docker build/push
+  paths only print their commands because this environment has no daemon.

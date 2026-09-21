@@ -210,12 +210,12 @@ npx tzin build  # production build
 ## CLI
 
 ```bash
-tzin dev [--port N]              # dev server with hot reload
-tzin build                       # build for production
-tzin deploy --target node|workers # deploy
-tzin generate route <name>       # scaffold a route
-tzin generate middleware <name>  # scaffold middleware
-tzin generate test <name>        # scaffold a test
+tzin dev [--port N]                                # dev server with hot reload
+tzin build                                         # build for production
+tzin deploy --target node|workers [--pack] [--docker <tag> [--push]]  # deploy
+tzin generate route <name>                         # scaffold a route
+tzin generate middleware <name>                    # scaffold middleware
+tzin generate test <name>                          # scaffold a test
 ```
 
 ## Benchmarks
