@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@carlos-tzin/tzin": "^1.0.4"
+    "@carlos-tzin/tzin": "^1.0.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",

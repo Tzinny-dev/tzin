@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@carlos-tzin/tzin": "^1.0.4"
+    "@carlos-tzin/tzin": "^1.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

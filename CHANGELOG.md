@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.0.5 — 2026-09-21
+
+Deployment polish + release automation. No API changes to the framework core.
+
+### CLI deploy
+
+- `tzin deploy --target node --pack` builds with `tsc` and packs
+  `dist + package.json (+Dockerfile / docker-compose.yml / .dockerignore`
+  when present) into `<name>-<version>.tgz`
+- `tzin deploy --target node --docker <tag> [--push]` runs
+  `docker build -t <tag>` and optionally `docker push`
+- Fix: the trailing `usage()` call and a premature `process.exit(0)` killed
+  async deploy/build before the `tsc` child finished — deploy printed the
+  help text and died silently. Now gated behind a `matched` flag, unknown
+  targets error clearly (`Available: node, workers`)
+
+### Docker + docs
+
+- `Dockerfile` (multi-stage, `node:20-slim`, prod-only deps,
+  `HEALTHCHECK` on `/health`) aligned to the real node template layout
+  (`tsconfig.json` → `dist/index.js`); `.dockerignore`; `docker-compose.yml`
+  (app + Redis with healthchecks)
+- `docs/deployment.md`: Node container, Workers Durable Objects,
+  multi-node Redis recipes, exact `create-tzin → docker build` flow
+- `examples/workers-quickstart/` + `.md`: copy-paste wrangler project
+  (DO + channels + presence); README examples table updated
+
+### Templates
+
+- All `create-tzin` templates bumped to `@carlos-tzin/tzin ^1.0.5`
+- Fix: `createApp([…, usersRoute])` nested an array inside the route list —
+  now `...usersRoute` in node/bun/workers templates
+- New optional `src/bus.ts` in the node template: `redisBus()` returns
+  `undefined` without `REDIS_URL`, ioredis-backed `MessageBus` with it
+  (lazy import, zero new deps to typecheck)
+
+### Release process
+
+- `scripts/release.mjs <patch|minor|major> [--dry-run]`: version bump,
+  template sync, CHANGELOG skeleton, commit + tag
+- `.github/workflows/release.yml`: tag-triggered npm publish via
+  Trusted Publishing (OIDC, `--provenance`), no `NPM_TOKEN` secret
+
 ## 1.0.4 — Node 20 compatibility fix
 
 No API changes. CI was failing on the Node 20 floor because the WS test and the
