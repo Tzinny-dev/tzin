@@ -37,3 +37,37 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           gh release create "$TAG" --title "${TAG#v}" --generate-notes
+
+  # create-tzin ships from the same repo but versions independently
+  # (local 0.1.5 vs published 0.1.4). Publishes only when the tag
+  # actually touches create-tzin/ — same OIDC trust, same workflow file.
+  publish-create-tzin:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # for npm trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check whether this tag touched create-tzin/
+        id: changed
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if git diff --quiet "${TAG}^" "${TAG}" -- create-tzin/; then
+            echo "touched=false" >> "$GITHUB_OUTPUT"
+            echo "create-tzin/ unchanged in ${TAG} — skipping publish."
+          else
+            echo "touched=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.changed.outputs.touched == 'true'
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install --prefix create-tzin
+        if: steps.changed.outputs.touched == 'true'
+      - run: npm run build --prefix create-tzin
+        if: steps.changed.outputs.touched == 'true'
+      - run: npm publish ./create-tzin --access public --provenance
+        if: steps.changed.outputs.touched == 'true'
