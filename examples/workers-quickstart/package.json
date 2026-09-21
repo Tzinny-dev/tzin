@@ -1,6 +1,6 @@
 {
-  "name": "tzin-app",
-  "version": "0.0.0",
+  "name": "tzin-workers-quickstart",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {

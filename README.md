@@ -27,6 +27,7 @@ npx create-tzin my-app
 
 - **[API Reference](docs/api-reference.md)** — all exports, types, and options
 - **[Architecture Guide](docs/architecture.md)** — request pipeline, design decisions, internals
+- **[Deployment Guide](docs/deployment.md)** — Docker, Cloudflare Workers, multi-node clustering
 - **[Roadmap](docs/roadmap.md)** — future features
 
 ## Why another framework?
@@ -247,6 +248,8 @@ tzin grows **strictly linearly** (~130 types/endpoint).
 | `examples/todo-api.ts` | Node | Full CRUD: auth middleware, DI, OpenAPI, MCP |
 | `examples/mcp-demo.ts` | Node | MCP server over stdio |
 | `examples/ws-demo.ts` | Bun | WebSocket channels with presence |
+| `examples/workers-quickstart/` | Workers | Copy-paste wrangler project: DO + channels + presence |
+| `examples/workers-quickstart.md` | Workers | Same project, explained file-by-file |
 
 ## Design principles
 

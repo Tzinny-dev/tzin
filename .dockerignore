@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+SESSION.md
+nohup.out
+.http-*.ts
+.http-*.mjs
+.env
+.env.*
+!.env.example

@@ -8,7 +8,7 @@
     "start": "bun run src/index.ts"
   },
   "dependencies": {
-    "@carlos-tzin/tzin": "^0.1.10"
+    "@carlos-tzin/tzin": "^1.0.4"
   },
   "devDependencies": {
     "bun-types": "^1.0.0",

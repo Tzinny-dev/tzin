@@ -1,0 +1,11 @@
+name = "tzin-workers-quickstart"
+main = "src/app.ts"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+[durable_objects]
+bindings = [{ name = "TZIN_APP", class_name = "TzinChannels" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TzinChannels"]
