@@ -161,7 +161,7 @@ Each node shares channels and presence through Redis pub/sub. See [MessageBus / 
 |---|---|---|
 | `PORT` | `3000` | HTTP listen port |
 | `NODE_ENV` | — | Set to `production` |
-| `TZIN_BUS` | — | Set to `redis` to enable multi-node (requires Redis URL via `REDIS_URL` or ioredis defaults) |
+| `REDIS_URL` | — | Set to `redis://host:6379` to enable multi-node (wires `src/bus.ts`); unset → standalone, no deps |
 
 ## 2. Cloudflare Workers
 

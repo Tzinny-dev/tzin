@@ -22,6 +22,7 @@ export async function redisBus(): Promise<MessageBus | undefined> {
   // Lazy import so apps without ioredis installed still typecheck and run.
   // Structural typing on purpose: no ioredis types needed at compile time.
   // Only the runtime package is required, and only when REDIS_URL is set.
+  // `as string` keeps tsc from resolving the module at compile time.
   interface RedisLike {
     connect(): Promise<unknown>
     publish(channel: string, message: string): Promise<unknown>
@@ -31,7 +32,7 @@ export async function redisBus(): Promise<MessageBus | undefined> {
     unsubscribe(channel: string): Promise<unknown>
     disconnect(): void
   }
-  const mod = (await import('ioredis')) as unknown as {
+  const mod = (await import('ioredis' as string)) as unknown as {
     Redis: new (url: string, opts?: Record<string, unknown>) => RedisLike
   }
   const pub = new mod.Redis(url, { lazyConnect: true })

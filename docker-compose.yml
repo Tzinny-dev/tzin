@@ -1,11 +1,14 @@
 services:
   app:
+    # This compose file lives in YOUR app repo (copy it from the tzin docs).
+    # `build: .` points at the app root, NOT at the tzin framework repo.
     build: .
     ports: ["3000:3000"]
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - TZIN_BUS=redis
+      # Multi-node: set REDIS_URL to wire src/bus.ts into the Redis bus.
+      # Unset → standalone app, no deps.
       - REDIS_URL=redis://redis:6379
     depends_on:
       redis:

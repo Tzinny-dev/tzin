@@ -37,7 +37,7 @@ ENV PORT=3000
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=3s --retries=3 \
-  CMD node -e "fetch('http://localhost:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://localhost:'+process.env.PORT+'/openapi.json').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Matches the node template's `start` script.
 CMD ["node", "dist/index.js"]
