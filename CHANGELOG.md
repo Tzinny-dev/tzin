@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.6 — 2026-09-22
+
+Deployment fixes after the 1.0.5 release. No API changes.
+
+### Templates
+
+- `create-tzin/templates/node/src/bus.ts`: `import('ioredis' as string)`
+  — the dynamic import was being resolved by `tsc` at compile time, so a
+  freshly scaffolded app (without `ioredis` installed) failed to build with
+  `Cannot find module 'ioredis'`. Now it typechecks and runs with zero new
+  dependencies; `ioredis` is only fetched at runtime when `REDIS_URL` is set.
+
+### Docker
+
+- `Dockerfile` HEALTHCHECK now hits `/openapi.json` instead of `/health`.
+  The node template mounts `bearerAuth` on every route, so `/health` returns
+  401 and the healthcheck would always fail. `/openapi.json` is public.
+
+### Compose / docs
+
+- `docker-compose.yml`: removed the `TZIN_BUS=redis` env var (the framework
+  never read it — clustering is enabled by `REDIS_URL` via `src/bus.ts`).
+  Added a comment that `build: .` points at the app root, not the framework
+  repo.
+- `docs/deployment.md` env-var table: `TZIN_BUS` → `REDIS_URL`.
+
 ## 1.0.5 — 2026-09-21
 
 Deployment polish + release automation. No API changes to the framework core.
