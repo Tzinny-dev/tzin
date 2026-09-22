@@ -1,5 +1,7 @@
 node_modules/
 dist/
+docs-site/.vitepress/dist
+docs-site/.vitepress/cache
 coverage/
 *.tsbuildinfo
 SESSION.md
