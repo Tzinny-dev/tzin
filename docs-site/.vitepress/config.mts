@@ -3,12 +3,12 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'tzin',
   description: 'Contract-first TypeScript framework. Types that scale, realtime channels with presence, and an MCP server for every API.',
-  base: '/tzin/',
+  base: '/',
   lang: 'en-US',
   cleanUrls: true,
 
   head: [
-    ['link', { rel: 'icon', href: '/tzin/favicon.ico' }],
+    ['link', { rel: 'icon', href: '/favicon.ico' }],
     ['meta', { property: 'og:title', content: 'tzin — contract-first TypeScript framework' }],
     ['meta', { property: 'og:description', content: 'Declare a contract once, get validation, OpenAPI, typed clients and MCP for free.' }],
     ['meta', { name: 'theme-color', content: '#0ea5e9' }],
