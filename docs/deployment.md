@@ -294,13 +294,14 @@ The Dockerfile above assumes `/health` returns 200. Adjust the `HEALTHCHECK` CMD
   by the existing miniflare probe (`npm run probe:workers`, 5/5).
 - [x] **Release automation (assisted)** — `scripts/release.mjs <patch|minor|major>
   [--dry-run]`: bumps root version, syncs `create-tzin` templates to `^NEXT`,
-  prepends a CHANGELOG skeleton, commits + tags. Publish happens in CI
-  (see next item) — the script only prints the fallback manual commands.
-- [ ] **Tag-triggered CI publish** — `.github/workflows/release.yml` runs on
-  `v*` tags via **npm Trusted Publishing (OIDC)**: `id-token: write` +
-  `npm publish --access public --provenance`, no `NPM_TOKEN` secret.
-  One-time setup per package required (see workflow header). Not yet
-  exercised end-to-end (needs a real tag push).
+  prepends a CHANGELOG skeleton, commits + tags. Publish itself is MANUAL
+  (see next item) — the script only prints the commands.
+- [x] **Tag-triggered CI** — `.github/workflows/release.yml` runs `npm ci` +
+  `npm run build` + `npm test` on every `v*` tag. Publishing is NOT in CI:
+  it happens locally with the npm token already in `~/.npmrc` (no secret in
+  the repo, no OTP). If you want CI to publish, uncomment the `publish`
+  job in the workflow and register a Trusted Publisher (OIDC) for both
+  packages at npmjs.com.
 - [x] **`tzin deploy --target node` as a real artifact** — `src/cli.ts` now
   builds with `tsc` and then: `--pack` tars `dist + package.json (+Dockerfile /
   docker-compose.yml / .dockerignore` when present) into

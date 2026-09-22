@@ -1,13 +1,16 @@
 name: Release
 
-# Publishes to npm when a v* tag is pushed (tags are created by
-# `node scripts/release.mjs <patch|minor|major>`).
+# Runs CI (build + tests) on every v* tag pushed by `node scripts/release.mjs`.
 #
-# Auth: npm Trusted Publishing (OIDC) — no NPM_TOKEN secret needed.
-# One-time setup per package (@carlos-tzin/tzin, create-tzin) at
+# Publishing is MANUAL and happens locally with the npm token in ~/.npmrc
+# (no secret in the repo, no OTP needed — see `release.mjs` next steps).
+#
+# If you later want CI to publish, uncomment the `publish` job below and
+# register a Trusted Publisher (OIDC) for both packages at
 # npmjs.com → package Settings → Trusted Publisher:
 #   organization: Tzinny-dev / repo: tzin / workflow: release.yml
-# Docs: https://docs.npmjs.com/trusted-publishers/
+# Note: npm Trusted Publishing requires npm ^11.5.1 and an .npmrc WITHOUT
+# an _authToken line (actions/setup-node#1551 — strip it after setup-node).
 
 on:
   push:
@@ -15,78 +18,40 @@ on:
       - 'v*'
 
 jobs:
-  publish:
+  ci:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # for gh release create
-      id-token: write # for npm trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          registry-url: https://registry.npmjs.org
       - run: npm ci
       - run: npm run build
       - run: npm test
-      # Trusted Publishing (OIDC) is verified on npm ^11.5.1 (npm/docs#1960,
-# dev.to writeup); npm@latest is 12.x — pin the known-good major
-      - run: npm install -g npm@^11.5.1
-      # setup-node@v4 writes _authToken=<placeholder> into .npmrc when no
-      # NODE_AUTH_TOKEN is set, which makes npm skip the OIDC exchange
-      # (actions/setup-node#1551) — strip it so trusted publishing kicks in
-      - name: Strip setup-node _authToken placeholder (breaks OIDC)
-        run: sed -i '/_authToken/d' "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
-      - run: npm publish --access public --provenance
-      - name: GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          gh release create "$TAG" --title "${TAG#v}" --generate-notes
 
-  # create-tzin ships from the same repo but versions independently
-  # (local 0.1.5 vs published 0.1.4). Publishes only when the tag
-  # actually touches create-tzin/ — same OIDC trust, same workflow file.
-  publish-create-tzin:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # for npm trusted publishing (OIDC)
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - name: Check whether create-tzin/ changed since the previous tag
-        id: changed
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          PREV="$(git describe --abbrev=0 "${TAG}^" 2>/dev/null || true)"
-          if [ -z "$PREV" ]; then
-            echo "No previous tag — publishing create-tzin."
-            echo "touched=true" >> "$GITHUB_OUTPUT"
-          elif git diff --quiet "$PREV" "$TAG" -- create-tzin/; then
-            echo "touched=false" >> "$GITHUB_OUTPUT"
-            echo "create-tzin/ unchanged between $PREV and $TAG — skipping publish."
-          else
-            echo "touched=true" >> "$GITHUB_OUTPUT"
-            echo "create-tzin/ changed between $PREV and $TAG — will publish."
-          fi
-      - uses: actions/setup-node@v4
-        if: steps.changed.outputs.touched == 'true'
-        with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-      - name: Strip setup-node _authToken placeholder (breaks OIDC)
-        if: steps.changed.outputs.touched == 'true'
-        run: sed -i '/_authToken/d' "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
-      - run: npm install -g npm@^11.5.1
-        if: steps.changed.outputs.touched == 'true'
-      - run: npm install --prefix create-tzin
-        if: steps.changed.outputs.touched == 'true'
-      - run: npm run build --prefix create-tzin
-        if: steps.changed.outputs.touched == 'true'
-      - run: npm publish ./create-tzin --access public --provenance
-        if: steps.changed.outputs.touched == 'true'
+  # publish:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #     id-token: write
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: npm
+  #         registry-url: https://registry.npmjs.org
+  #     - run: npm ci
+  #     - run: npm run build
+  #     - run: npm test
+  #     - run: npm install -g npm@^11.5.1
+  #     - name: Strip setup-node _authToken placeholder (breaks OIDC)
+  #       run: sed -i '/_authToken/d' "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+  #     - run: npm publish --access public --provenance
+  #     - name: GitHub Release
+  #       env:
+  #         GH_TOKEN: ${{ github.token }}
+  #       run: |
+  #         TAG="${GITHUB_REF_NAME}"
+  #         gh release create "$TAG" --title "${TAG#v}" --notes-file CHANGELOG.md

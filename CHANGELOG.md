@@ -40,8 +40,8 @@ Deployment polish + release automation. No API changes to the framework core.
 
 - `scripts/release.mjs <patch|minor|major> [--dry-run]`: version bump,
   template sync, CHANGELOG skeleton, commit + tag
-- `.github/workflows/release.yml`: tag-triggered npm publish via
-  Trusted Publishing (OIDC, `--provenance`), no `NPM_TOKEN` secret
+- `.github/workflows/release.yml`: tag-triggered CI (build + tests only);
+  publishing is manual with the npm token in `~/.npmrc` (no repo secret)
 
 ## 1.0.4 — Node 20 compatibility fix
 
