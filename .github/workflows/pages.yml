@@ -9,6 +9,12 @@ on:
       - 'README.md'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
+    inputs:
+      custom_domain:
+        description: 'Forzar dominio custom? (auto = según public/CNAME)'
+        type: choice
+        default: auto
+        options: [auto, 'true', 'false']
 
 permissions:
   contents: read
@@ -37,6 +43,8 @@ jobs:
 
       - name: Build VitePress site
         working-directory: docs-site
+        env:
+          CUSTOM_DOMAIN: ${{ inputs.custom_domain == 'auto' && '' || inputs.custom_domain }}
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v3

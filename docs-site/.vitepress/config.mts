@@ -1,14 +1,30 @@
 import { defineConfig } from 'vitepress'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+// Si existe public/CNAME => deploy con dominio custom => base '/'
+// Si no => deploy a user.github.io/tzin => base '/tzin/'
+// Override manual: CUSTOM_DOMAIN=true|false  |  PAGES_BASE=/otra/
+const hasCNAME = existsSync(resolve(import.meta.dirname, '../public/CNAME'))
+const base =
+  process.env.PAGES_BASE ??
+  (process.env.CUSTOM_DOMAIN === 'true'
+    ? '/'
+    : process.env.CUSTOM_DOMAIN === 'false'
+      ? '/tzin/'
+      : hasCNAME
+        ? '/'
+        : '/tzin/')
 
 export default defineConfig({
   title: 'tzin',
   description: 'Contract-first TypeScript framework. Types that scale, realtime channels with presence, and an MCP server for every API.',
-  base: '/',
+  base,
   lang: 'en-US',
   cleanUrls: true,
 
   head: [
-    ['link', { rel: 'icon', href: '/favicon.ico' }],
+    ['link', { rel: 'icon', href: '/logo.svg', type: 'image/svg+xml' }],
     ['meta', { property: 'og:title', content: 'tzin — contract-first TypeScript framework' }],
     ['meta', { property: 'og:description', content: 'Declare a contract once, get validation, OpenAPI, typed clients and MCP for free.' }],
     ['meta', { name: 'theme-color', content: '#0ea5e9' }],
