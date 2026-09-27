@@ -8,6 +8,7 @@
 [![CI](https://github.com/Tzinny-dev/tzin/actions/workflows/ci.yml/badge.svg)](https://github.com/Tzinny-dev/tzin/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@carlos-tzin/tzin)](https://www.npmjs.com/package/@carlos-tzin/tzin)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/carlostzin)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/tzinny)
 
 **Status: stable (1.0.x).** The core works end-to-end (see [Benchmarks](#benchmarks));
 1.0.0 shipped the stable API, and 1.0.2 adds test coverage gates, a wider CI
@@ -24,6 +25,8 @@ npx create-tzin my-app
 ```
 
 ## Documentation
+
+Hosted site: **[tzin.tzinny.com](https://tzin.tzinny.com)**
 
 - **[API Reference](docs/api-reference.md)** — all exports, types, and options
 - **[Architecture Guide](docs/architecture.md)** — request pipeline, design decisions, internals
