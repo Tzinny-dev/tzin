@@ -31,6 +31,27 @@ jobs:
       - name: Workers probe (miniflare)
         run: node scripts/workers-probe.mjs
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+      - name: Install docs deps
+        working-directory: docs-site
+        run: npm ci
+      - name: Build docs site (no analytics)
+        working-directory: docs-site
+        run: npm run build
+      - name: Build docs site (with analytics)
+        working-directory: docs-site
+        env:
+          GA_ID: G-TEST1234
+        run: npm run build
+
   bun-smoke:
     runs-on: ubuntu-latest
     steps:
