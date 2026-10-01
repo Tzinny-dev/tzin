@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { spawn } from 'node:child_process'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
@@ -232,4 +232,35 @@ console.log('APP_OK')
     expect(r.code).toBe(0)
     expect(r.out).toContain('APP_OK')
   }, 30_000)
+})
+
+// The scaffold ships a tzin.config.ts; it used to be dropped on the floor.
+describe('tzin.config.ts', () => {
+  const port = 4931
+
+  it('honours port from tzin.config.ts in the dev server', async () => {
+    const dir = makeProject({
+      'package.json': JSON.stringify({ name: 'app', version: '0.0.0', type: 'module' }),
+      'tsconfig.json': tsconfig,
+      'tzin.config.ts': `import { defineConfig } from '@carlos-tzin/tzin'\nexport default defineConfig({ port: ${port} })\n`,
+      'src/app.ts': `import { createApp } from '@carlos-tzin/tzin'
+export const app = createApp([])
+export default app
+`,
+    })
+    // Resolve the framework the same way an installed app does.
+    mkdirSync(resolve(dir, 'node_modules/@carlos-tzin'), { recursive: true })
+    symlinkSync(root, resolve(dir, 'node_modules/@carlos-tzin/tzin'), 'dir')
+    try {
+      const log = await watchUntil([distCli, 'dev'], dir, 'watching for changes')
+      expect(log).toContain(`http://localhost:${port}`)
+      // No routes in the fixture app, so any HTTP answer proves the config
+      // port is the one actually serving (the default is 3000).
+      const res = await fetch(`http://127.0.0.1:${port}/ping`)
+      expect(res.status).toBe(404)
+    } finally {
+      rmSync(resolve(dir, 'node_modules/@carlos-tzin/tzin'), { force: true })
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }, 60_000)
 })

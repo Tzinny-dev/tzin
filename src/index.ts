@@ -49,5 +49,5 @@ export { wsChannels, type WsRoute, type WsSend, type WsChannelOptions } from './
 export { attachChannels } from './ws-node.js'
 export { LocalBus, clusterHubs, type MessageBus } from './bus.js'
 export { cors, type CorsOptions } from './cors.js'
-export { defineConfig, loadConfig, type TzinConfig } from './config.js'
+export { defineConfig, loadConfig, loadConfigAsync, type TzinConfig } from './config.js'
 export { loadRoutes, type RouteLoaderOptions } from './route-loader.js'

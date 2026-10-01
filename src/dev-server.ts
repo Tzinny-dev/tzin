@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs'
 import type { App } from './server.js'
 import type { AnyRoute } from './contract.js'
 import { listen } from './node.js'
-import { loadConfig, type TzinConfig } from './config.js'
+import { loadConfigAsync, type TzinConfig } from './config.js'
 
 function pad(s: string, n: number): string {
   return s.length >= n ? s : s + ' '.repeat(n - s.length)
@@ -37,7 +37,7 @@ if (portFlag !== -1) {
 }
 
 // Load config
-const config = loadConfig() ?? {} as TzinConfig
+const config = (await loadConfigAsync()) ?? {} as TzinConfig
 
 // Auto-detect entry: CLI arg > config > src/app.ts
 const entryFile = entry || config.entry || 'src/app.ts'

@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **`tzin.config.ts` was silently ignored.** `loadConfig()` bailed out with
+  `null` for `.ts` files, so the `tzin.config.ts` that every scaffolded project
+  ships never applied — changing `port` there did nothing while the dev server
+  kept listening on the default. Added `loadConfigAsync()`, which reads a
+  TypeScript config through a dynamic import, and wired the dev server (which
+  runs under `tsx`) to it. The sync `loadConfig()` keeps its signature and
+  still handles `.js` / `.mjs` / `.json`.
+- Tests: `tzin.config.ts` is now covered end to end (the dev server is spawned
+  and asserted to serve on the configured port).
+- `vitest.config.ts`: exclude `.kilo/` and `.kilocode/`. Agent tooling leaves
+  git worktrees inside the repo holding stale copies of the suite, which the
+  default glob picked up (9 test files became 17).
+
 ## 1.0.7 — 2026-09-27
 
 The `tzin` CLI was announced as a headline feature but was **not reachable** in
