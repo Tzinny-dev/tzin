@@ -97,7 +97,8 @@ Strictly linear — ~130 types/endpoint.
 ```bash
 npx create-tzin my-api
 cd my-api
-npx tzin dev    # http://localhost:3000
+npm install
+npm run dev    # tzin dev -> http://localhost:3000
 ```
 
 <div class="tip custom-block" style="padding-top: 8px">

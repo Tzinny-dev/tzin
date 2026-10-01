@@ -8,3 +8,4 @@ SESSION.md
 nohup.out
 .http-*.ts
 .http-*.mjs
+.tmp-cli-*

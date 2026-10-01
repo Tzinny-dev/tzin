@@ -206,8 +206,15 @@ export const app = createApp([getUserRoute], {
 ### 4. Run
 
 ```bash
-npx tzin dev    # dev server at http://localhost:3000
-npx tzin build  # production build
+npm run dev    # tzin dev  -> dev server at http://localhost:3000
+npm run build  # tzin build -> production build
+```
+
+The `tzin` binary ships with the package, so these scripts work after `npm install`. Without
+a local install, run it through npm exec:
+
+```bash
+npx --package @carlos-tzin/tzin tzin dev
 ```
 
 ## CLI

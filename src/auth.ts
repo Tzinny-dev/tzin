@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto'
 import { defineContext } from './context.js'
 import type { Middleware } from './middleware.js'
 
@@ -48,7 +49,6 @@ function base64UrlDecode(data: string): string {
 }
 
 function hmacSign(data: string, secret: string): string {
-  const { createHmac } = require('node:crypto') as typeof import('node:crypto')
   return createHmac('sha256', secret).update(data).digest('base64url')
 }
 

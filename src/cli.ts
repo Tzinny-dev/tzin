@@ -1,9 +1,53 @@
-import { spawn } from 'node:child_process'
+#!/usr/bin/env node
+import { spawn, type ChildProcess } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { resolve } from 'node:path'
+import { resolve, dirname } from 'node:path'
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 
 const [,, cmd, ...rest] = process.argv
+
+// Published package ships dist/*.js, repo runs from src/*.ts — pick the one that exists.
+function siblingModule(name: string): string {
+  const js = fileURLToPath(new URL(`./${name}.js`, import.meta.url))
+  if (existsSync(js)) return js
+  const ts = fileURLToPath(new URL(`./${name}.ts`, import.meta.url))
+  if (existsSync(ts)) return ts
+  console.error(`tzin: cannot locate ${name} (looked for ${js} and ${ts})`)
+  process.exit(1)
+}
+
+// npm package that provides each binary (never assume bin name == package name:
+// `npx tsc` without typescript installed runs an unrelated third-party `tsc`).
+const TOOL_PACKAGE: Record<string, string> = { tsc: 'typescript' }
+
+const isWin = process.platform === 'win32'
+
+function localBin(name: string, cwd: string): string | null {
+  const exe = isWin ? `${name}.cmd` : name
+  let dir = cwd
+  for (;;) {
+    const candidate = resolve(dir, 'node_modules', '.bin', exe)
+    if (existsSync(candidate)) return candidate
+    const parent = dirname(dir)
+    if (parent === dir) return null
+    dir = parent
+  }
+}
+
+// Prefer the project's own binary; only fall back to npx (pinned to the right
+// package) when the tool is not installed locally.
+function runTool(name: string, args: string[], cwd: string): ChildProcess {
+  const local = localBin(name, cwd)
+  if (local) return spawn(local, args, { cwd, stdio: 'inherit' })
+  const pkg = TOOL_PACKAGE[name] ?? name
+  console.error(`tzin: ${name} not found in ${cwd} (install it to pin the version)`)
+  return spawn('npx', ['--yes', '--package', pkg, name, ...args], {
+    cwd,
+    stdio: 'inherit',
+    shell: isWin,
+  })
+}
+
 let matched = false
 
 function usage(): never {
@@ -26,6 +70,7 @@ if (!cmd || cmd === '--help' || cmd === '-h') usage()
 
 if (cmd === 'dev') {
   matched = true
+  const cwd = process.cwd()
   let entry = ''
   let port = '3000'
 
@@ -35,15 +80,17 @@ if (cmd === 'dev') {
   const entryArg = rest.find((a) => !a.startsWith('-'))
   if (entryArg) entry = entryArg
 
-  const devServer = fileURLToPath(new URL('./dev-server.ts', import.meta.url))
-  const args = ['tsx', 'watch', '--clear-screen=false', devServer]
+  const devServer = siblingModule('dev-server')
+  const args = ['watch', '--clear-screen=false', devServer]
   if (entry) args.push(entry)
   args.push('--port', port)
 
-  const child = spawn('npx', args, { stdio: 'inherit' })
+  const child = runTool('tsx', args, cwd)
   process.on('SIGINT', () => child.kill('SIGINT'))
-  child.on('exit', (code) => process.exit(code ?? 0))
-  process.exit(0)
+  process.on('SIGTERM', () => child.kill('SIGTERM'))
+  // Stay alive until the watcher exits — the parent must not return the
+  // prompt (or npm's exit code) while the dev server is still running.
+  child.on('exit', (code, signal) => process.exit(code ?? (signal ? 1 : 0)))
 }
 
 // ── build ─────────────────────────────────────────────────────────────
@@ -66,10 +113,7 @@ if (cmd === 'build') {
 
   console.log('Building...')
 
-  const child = spawn('npx', ['tsc', '-p', 'tsconfig.json'], {
-    cwd,
-    stdio: 'inherit',
-  })
+  const child = runTool('tsc', ['-p', 'tsconfig.json'], cwd)
 
   child.on('exit', (code) => {
     if (code === 0) {
@@ -77,7 +121,8 @@ if (cmd === 'build') {
     }
     process.exit(code ?? 1)
   })
-  process.exit(0)
+  // NOTE: no trailing process.exit(0) — it would return success to the
+  // caller before tsc finishes (and mask type errors).
 }
 
 // ── deploy ────────────────────────────────────────────────────────────
@@ -103,108 +148,102 @@ if (cmd === 'deploy') {
       process.exit(1)
     }
 
-    const child = spawn('npx', ['wrangler', 'deploy'], {
-      cwd,
-      stdio: 'inherit',
-    })
+    const child = runTool('wrangler', ['deploy'], cwd)
 
     child.on('exit', (code) => process.exit(code ?? 1))
-    process.exit(0)
-  }
-
-  // Default: Node
-  if (target !== 'node') {
+  } else if (target === 'node') {
+    nodeDeploy()
+  } else {
     console.error(`Unknown deploy target: ${target}`)
     console.error('Available: node, workers')
     process.exit(1)
   }
 
-  // Check for tsconfig
-  if (!existsSync(resolve(cwd, 'tsconfig.json'))) {
-    console.error('No tsconfig.json found')
-    process.exit(1)
-  }
-
-  console.log('Building for production...')
-
-  const build = spawn('npx', ['tsc', '-p', 'tsconfig.json'], {
-    cwd,
-    stdio: 'inherit',
-  })
-
-  build.on('exit', (code) => {
-    if (code !== 0) process.exit(code ?? 1)
-    console.log('\n✓ Build complete')
-    afterBuild()
-  })
-  // NOTE: no trailing process.exit(0) here — the parent must stay alive
-  // until the build child exits and afterBuild() runs. Calling
-  // process.exit() here would kill the process (and the child listener)
-  // before the build finishes.
-
-  function afterBuild() {
-    const pkgPath = resolve(cwd, 'package.json')
-    let name = 'app'
-    let version = '0.0.0'
-    try {
-      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
-      name = String(pkg.name ?? 'app').replace(/^@/, '').replace(/\//g, '-')
-      version = String(pkg.version ?? '0.0.0')
-    } catch {
-      console.error('No package.json found — is this a tzin project?')
+  function nodeDeploy() {
+    // Check for tsconfig
+    if (!existsSync(resolve(cwd, 'tsconfig.json'))) {
+      console.error('No tsconfig.json found')
       process.exit(1)
     }
 
-    // --pack: runnable tarball (dist + manifest + container files when present).
-    if (pack) {
-      const out = resolve(cwd, `${name}-${version}.tgz`)
-      const files = ['dist', 'package.json']
-      for (const f of ['Dockerfile', 'docker-compose.yml', '.dockerignore']) {
-        if (existsSync(resolve(cwd, f))) files.push(f)
+    console.log('Building for production...')
+
+    const build = runTool('tsc', ['-p', 'tsconfig.json'], cwd)
+
+    build.on('exit', (code) => {
+      if (code !== 0) process.exit(code ?? 1)
+      console.log('\n✓ Build complete')
+      afterBuild()
+    })
+    // NOTE: no trailing process.exit(0) here — the parent must stay alive
+    // until the build child exits and afterBuild() runs. Calling
+    // process.exit() here would kill the process (and the child listener)
+    // before the build finishes.
+
+    function afterBuild() {
+      const pkgPath = resolve(cwd, 'package.json')
+      let name = 'app'
+      let version = '0.0.0'
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+        name = String(pkg.name ?? 'app').replace(/^@/, '').replace(/\//g, '-')
+        version = String(pkg.version ?? '0.0.0')
+      } catch {
+        console.error('No package.json found — is this a tzin project?')
+        process.exit(1)
       }
-      console.log(`Packing ${files.join(', ')} → ${out}`)
-      const tar = spawn('tar', ['-czf', out, ...files], { cwd, stdio: 'inherit' })
-      tar.on('exit', (tarCode) => {
-        if (tarCode !== 0) process.exit(tarCode ?? 1)
-        console.log(`\n✓ Packed ${out}`)
-        console.log(`Unpack + run: tar -xzf ${name}-${version}.tgz && node dist/index.js`)
-        if (dockerTag) dockerBuild()
-        else process.exit(0)
-      })
-      return
-    }
 
-    if (dockerTag) {
-      dockerBuild()
-      return
-    }
-
-    console.log('Run: node dist/index.js')
-    console.log('Tip: tzin deploy --target node --pack [--docker <tag> [--push]] for a runnable artifact')
-    process.exit(0)
-  }
-
-  function dockerBuild() {
-    if (!dockerTag) return
-    if (!existsSync(resolve(cwd, 'Dockerfile'))) {
-      console.error('No Dockerfile found. Copy the reference Dockerfile from the tzin repo (see docs/deployment.md).')
-      process.exit(1)
-    }
-    console.log(`Building Docker image ${dockerTag}...`)
-    const args = ['build', '-t', dockerTag, '.']
-    const child = spawn('docker', args, { cwd, stdio: 'inherit' })
-    child.on('exit', (buildCode) => {
-      if (buildCode !== 0) process.exit(buildCode ?? 1)
-      console.log(`\n✓ Image built: ${dockerTag}`)
-      if (!push) {
-        console.log(`Run: docker run -p 3000:3000 --env PORT=3000 ${dockerTag}`)
-        process.exit(0)
+      // --pack: runnable tarball (dist + manifest + container files when present).
+      if (pack) {
+        const out = resolve(cwd, `${name}-${version}.tgz`)
+        const files = ['dist', 'package.json']
+        for (const f of ['Dockerfile', 'docker-compose.yml', '.dockerignore']) {
+          if (existsSync(resolve(cwd, f))) files.push(f)
+        }
+        console.log(`Packing ${files.join(', ')} → ${out}`)
+        const tar = spawn('tar', ['-czf', out, ...files], { cwd, stdio: 'inherit' })
+        tar.on('exit', (tarCode) => {
+          if (tarCode !== 0) process.exit(tarCode ?? 1)
+          console.log(`\n✓ Packed ${out}`)
+          console.log(`Unpack + run: tar -xzf ${name}-${version}.tgz && node dist/index.js`)
+          if (dockerTag) dockerBuild()
+          else process.exit(0)
+        })
         return
       }
-      console.log(`Pushing ${dockerTag}...`)
-      const pushChild = spawn('docker', ['push', dockerTag], { cwd, stdio: 'inherit' })
-      pushChild.on('exit', (pushCode) => process.exit(pushCode ?? 1))
-    })
+
+      if (dockerTag) {
+        dockerBuild()
+        return
+      }
+
+      console.log('Run: node dist/index.js')
+      console.log('Tip: tzin deploy --target node --pack [--docker <tag> [--push]] for a runnable artifact')
+      process.exit(0)
+    }
+
+    function dockerBuild() {
+      if (!dockerTag) return
+      if (!existsSync(resolve(cwd, 'Dockerfile'))) {
+        console.error('No Dockerfile found. Copy the reference Dockerfile from the tzin repo (see docs/deployment.md).')
+        process.exit(1)
+      }
+      console.log(`Building Docker image ${dockerTag}...`)
+      const args = ['build', '-t', dockerTag, '.']
+      const child = spawn('docker', args, { cwd, stdio: 'inherit' })
+      child.on('exit', (buildCode) => {
+        if (buildCode !== 0) process.exit(buildCode ?? 1)
+        console.log(`\n✓ Image built: ${dockerTag}`)
+        if (!push) {
+          console.log(`Run: docker run -p 3000:3000 --env PORT=3000 ${dockerTag}`)
+          process.exit(0)
+          return
+        }
+        console.log(`Pushing ${dockerTag}...`)
+        const pushChild = spawn('docker', ['push', dockerTag], { cwd, stdio: 'inherit' })
+        pushChild.on('exit', (pushCode) => process.exit(pushCode ?? 1))
+      })
+    }
   }
 }
 

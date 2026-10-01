@@ -1,5 +1,66 @@
 # Changelog
 
+## 1.0.7 — 2026-09-27
+
+The `tzin` CLI was announced as a headline feature but was **not reachable** in
+a published install. `npm run dev` in a freshly scaffolded app failed with
+`sh: 1: tzin: not found`, and `npx tzin dev` in the docs 404'd because no
+unscoped `tzin` package exists on npm. Fixed here.
+
+### Fixed
+
+- **`bin` field added to `package.json`** — `@carlos-tzin/tzin` now installs a
+  `tzin` executable into `node_modules/.bin`, so the `create-tzin` node
+  template (`"dev": "tzin dev"`, `"build": "tzin build"`) works after
+  `npm install`.
+- **Shebang in `src/cli.ts`** — `dist/cli.js` is now a runnable binary. `tsc`
+  preserves it on emit.
+- **`dev` no longer resolves a `.ts` file from `dist/`** — the CLI pointed
+  `tsx watch` at `./dev-server.ts` relative to itself, which only exists in
+  `src/`. In the published package the watcher died with
+  `ERR_MODULE_NOT_FOUND: .../dist/dev-server.ts`. It now resolves the sibling
+  module for both layouts (`.js` when built, `.ts` when run from source).
+- **`tzin build` / `tzin dev` no longer return before their child exits** —
+  both spawned `tsc` / `tsx watch` and then called `process.exit(0)`, so
+  `tzin build` reported success (exit 0) even with type errors and the dev
+  server was orphaned. The CLI now waits and forwards the child's exit code,
+  breaking a CI build on a type error instead of shipping stale output.
+- **Tool resolution** — `tsx` / `tsc` / `wrangler` are now taken from the
+  project's own `node_modules/.bin` (walking up from cwd). The npx fallback
+  pins the right package (`--package typescript tsc`); previously `npx tsc`
+  without a local install ran an unrelated third-party `tsc` package.
+
+### Also fixed (found while verifying the above — both shipped broken in 1.0.6)
+
+- **`signJwt` / `verifyJwt` threw in every consumer install.**
+  `src/auth.ts` used a bare `require('node:crypto')` inside an ESM package,
+  so `dist/auth.js` shipped as `require` + top-level `await` and blew up with
+  `ReferenceError: Cannot determine intended module format` /
+  `ERR_AMBIGUOUS_MODULE_SYNTAX` on the first call. The unit tests passed
+  because Vitest's module runner injects a `require` shim, so nothing
+  exercised the published artifact. Now a static `import`.
+- **`loadConfig()` silently ignored every config file.** Same bare `require`
+  in `src/config.ts`, swallowed by the surrounding `try/catch` and turned into
+  a `null` return, so `port` / `openapi` / `routes` from `tzin.config.*` never
+  applied. Now uses `createRequire(import.meta.url)`, which also lets Node load
+  ESM `.js` and `.mjs` configs.
+
+### Docs
+
+- Replaced every `npx tzin dev` / `npx tzin build` (which 404) with
+  `npm run dev` / `npm run build`, plus `npx --package @carlos-tzin/tzin tzin dev`
+  for one-off runs without a local install.
+
+### Tests
+
+- `test/cli.test.ts`: asserts the `bin` mapping, the shebang in source and
+  build output, that `build` waits for `tsc` and propagates a non-zero exit
+  code, and that `dev` from the built layout finds `dev-server` instead of
+  crashing.
+- `test/cli.test.ts`: runs the built `dist/` in a plain node process to assert
+  JWT signing, `loadConfig`, and a served app work outside Vitest's transform
+  (the gap that let the `require` bugs reach npm).
+
 ## 1.0.6 — 2026-09-22
 
 Deployment fixes after the 1.0.5 release. No API changes.
