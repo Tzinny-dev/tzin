@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.8 — 2026-10-01
 
 - **`tzin.config.ts` was silently ignored.** `loadConfig()` bailed out with
   `null` for `.ts` files, so the `tzin.config.ts` that every scaffolded project
