@@ -1,6 +1,6 @@
 {
   "name": "@carlos-tzin/tzin",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Contract-first TypeScript framework. Types that scale, realtime channels with presence, and an MCP server for every API.",
   "license": "MIT",
   "author": "The tzin authors",
@@ -26,6 +26,9 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "tzin": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
